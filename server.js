@@ -194,6 +194,15 @@ app.get('/api/moods/today', async (req, res) => {
     }
 });
 
+app.get('/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error("Logout error:", err);
+        }
+        res.redirect('/');
+    });
+});
+
 app.listen(PORT, () =>{
     console.log(`🚀 Server is live on http://localhost:${PORT}`)
 });
