@@ -40,6 +40,7 @@
 
         .form-group {
             margin-bottom: 20px;
+            position: relative;
         }
 
         label {
@@ -50,10 +51,14 @@
             font-weight: 500;
         }
 
+        .password-wrapper {
+            position: relative;
+        }
+
         input[type="text"],
         input[type="password"] {
             width: 100%;
-            padding: 10px 12px;
+            padding: 10px 40px 10px 12px;
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 14px;
@@ -64,6 +69,26 @@
         input[type="password"]:focus {
             outline: none;
             border-color: #666;
+        }
+
+        .eye-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 18px;
+            user-select: none;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+            background: none;
+            border: none;
+            padding: 5px;
+            color: #666;
+        }
+
+        .eye-toggle:hover {
+            opacity: 1;
         }
 
         input[type="submit"] {
@@ -111,7 +136,10 @@
 
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
+                <div class="password-wrapper">
+                    <input type="password" id="password" name="password" required>
+                    <span class="eye-toggle" onclick="togglePassword()">👁️</span>
+                </div>
             </div>
 
             <input type="submit" value="Log in">
@@ -121,5 +149,19 @@
             </div>
         </form>
     </div>
+
+    <script>
+        function togglePassword() {
+            const input = document.getElementById('password');
+            const icon = document.querySelector('.eye-toggle');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                icon.textContent = '👁️';
+            }
+        }
+    </script>
 </body>
 </html>

@@ -27,7 +27,7 @@
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 360px;
+            max-width: 380px;
         }
 
         h1 {
@@ -40,6 +40,7 @@
 
         .form-group {
             margin-bottom: 20px;
+            position: relative;
         }
 
         label {
@@ -50,10 +51,14 @@
             font-weight: 500;
         }
 
+        .password-wrapper {
+            position: relative;
+        }
+
         input[type="text"],
         input[type="password"] {
             width: 100%;
-            padding: 10px 12px;
+            padding: 10px 40px 10px 12px;
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 14px;
@@ -64,6 +69,26 @@
         input[type="password"]:focus {
             outline: none;
             border-color: #666;
+        }
+
+        .eye-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 18px;
+            user-select: none;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+            background: none;
+            border: none;
+            padding: 5px;
+            color: #666;
+        }
+
+        .eye-toggle:hover {
+            opacity: 1;
         }
 
         input[type="submit"] {
@@ -98,12 +123,42 @@
             color: #333;
             text-decoration: underline;
         }
+
+        /* Password requirements */
+        .requirements {
+            margin-top: 8px;
+            padding: 0;
+            list-style: none;
+            font-size: 12px;
+        }
+
+        .requirements li {
+            padding: 3px 0;
+            color: #999;
+            transition: color 0.2s;
+        }
+
+        .requirements li.met {
+            color: #51cf66;
+        }
+
+        .requirements li.met::before {
+            content: '✓ ';
+        }
+
+        .requirements li.unmet::before {
+            content: '○ ';
+        }
+
+        .requirements li.unmet {
+            color: #999;
+        }
     </style>
 </head>
 <body>
     <div class="register-container">
         <h1>Registration</h1>
-        <form action="/register" method="POST">
+        <form action="/register" method="POST" id="registerForm">
             <div class="form-group">
                 <label for="register_user">Username</label>
                 <input type="text" id="register_user" name="register_user" required>
@@ -111,12 +166,25 @@
 
             <div class="form-group">
                 <label for="register_password">Password</label>
-                <input type="password" id="register_password" name="register_password" required>
+                <div class="password-wrapper">
+                    <input type="password" id="register_password" name="register_password" required>
+                    <span class="eye-toggle" onclick="togglePassword('register_password', this)">👁️</span>
+                </div>
+                <ul class="requirements" id="passwordRequirements">
+                    <li id="req-length" class="unmet">At least 8 characters</li>
+                    <li id="req-uppercase" class="unmet">At least one uppercase letter</li>
+                    <li id="req-special" class="unmet">At least one special character (!@#$%^&*)</li>
+                    <li id="req-number" class="unmet">At least one number</li>
+                </ul>
             </div>
 
             <div class="form-group">
                 <label for="confirm_password">Confirm password</label>
-                <input type="password" id="confirm_password" name="confirm_password" required>
+                <div class="password-wrapper">
+                    <input type="password" id="confirm_password" name="confirm_password" required>
+                    <span class="eye-toggle" onclick="togglePassword('confirm_password', this)">👁️</span>
+                </div>
+                <div id="matchMessage" style="font-size: 12px; margin-top: 5px;"></div>
             </div>
 
             <input type="submit" value="Create account">
@@ -126,5 +194,67 @@
             </div>
         </form>
     </div>
+
+    <script>
+        // Toggle password visibility
+        function togglePassword(inputId, icon) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                icon.textContent = '👁️';
+            }
+        }
+
+        // Live password requirement checker
+        const passwordInput = document.getElementById('register_password');
+        const confirmInput = document.getElementById('confirm_password');
+        const matchMessage = document.getElementById('matchMessage');
+
+        const requirements = {
+            length: { regex: /.{8,}/, element: document.getElementById('req-length') },
+            uppercase: { regex: /[A-Z]/, element: document.getElementById('req-uppercase') },
+            special: { regex: /[!@#$%^&*]/, element: document.getElementById('req-special') },
+            number: { regex: /[0-9]/, element: document.getElementById('req-number') }
+        };
+
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+
+            for (let key in requirements) {
+                const req = requirements[key];
+                if (req.regex.test(password)) {
+                    req.element.classList.remove('unmet');
+                    req.element.classList.add('met');
+                } else {
+                    req.element.classList.remove('met');
+                    req.element.classList.add('unmet');
+                }
+            }
+
+            // Also check match if confirm has value
+            if (confirmInput.value) {
+                checkMatch();
+            }
+        });
+
+        confirmInput.addEventListener('input', checkMatch);
+
+        function checkMatch() {
+            if (confirmInput.value === '') {
+                matchMessage.textContent = '';
+                return;
+            }
+            if (passwordInput.value === confirmInput.value) {
+                matchMessage.textContent = '✓ Passwords match';
+                matchMessage.style.color = '#51cf66';
+            } else {
+                matchMessage.textContent = '✗ Passwords do not match';
+                matchMessage.style.color = '#ff6b6b';
+            }
+        }
+    </script>
 </body>
 </html>
