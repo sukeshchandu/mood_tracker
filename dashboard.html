@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mood Grid</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #ffffff; 
+            display: flex; flex-direction: column; align-items: center; 
+            padding: 20px; margin: 0; color: #333;
+        }
+
+        
+        .top-bar {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            color: #555;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+       
+        .top-bar .user { font-style: italic; }
+        .top-bar .date { font-weight: 600; color: #333; }
+
+        h1 { margin-bottom: 30px; font-weight: 300; }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+            gap: 15px;
+            width: 100%; max-width: 600px;
+            padding: 20px; background: #fff;
+        }
+
+        .hour-block {
+            min-height: 75px;
+            border-radius: 8px;
+            background-color: #f4f4f4;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 0.9em; color: #777;
+            position: relative; 
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .hour-block.past { opacity: 0.5; background-color: #eee; pointer-events: none; }
+        .hour-block.future { opacity: 0.7; background-color: #f9f9f9; pointer-events: none; }
+        
+        .hour-block.current {
+            transform: scale(1.05); 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            font-weight: bold; color: #000; border-color: #333;
+            cursor: pointer; z-index: 10; background-color: #fff;
+        }
+
+        
+        .mood-1 { background-color: #ff6b6b !important; color: white; border-color: transparent; }
+        .mood-2 { background-color: #e0e0e0 !important; color: black; border-color: transparent; }
+        .mood-3 { background-color: #51cf66 !important; color: white; border-color: transparent; }
+
+       
+        .options-popup {
+            display: none; 
+            position: absolute;
+            bottom: -55px; 
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 8px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.25);
+            gap: 5px;
+            z-index: 20;
+            white-space: nowrap;
+            padding-top: 15px; 
+            margin-top: -10px; 
+            clip-path: inset(0px -20px -20px -20px); 
+        }
+        
+        .options-popup.show { display: flex; }
+
+        .mood-btn {
+            border: none; padding: 8px 12px; border-radius: 6px;
+            cursor: pointer; font-weight: 600; font-size: 0.8em; color: white;
+            transition: transform 0.1s;
+            position: relative; z-index: 25; 
+        }
+        .mood-btn:hover { transform: scale(1.05); }
+        .btn-bad { background: #ff6b6b; }
+        .btn-neutral { background: #9e9e9e; color: white; }
+        .btn-good { background: #51cf66; }
+
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+       
+        <div class="user" id="display-user">Loading user...</div>
+         <div class="date" id="display-date">Loading date...</div>
+    </div>
+
+    <h1>Today's Grid</h1>
+    <div class="grid-container" id="grid"></div>
+
+    <script>
+      
+        const dateElement = document.getElementById('display-date');
+        const today = new Date();
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        dateElement.innerText = today.toLocaleDateString(undefined, dateOptions);
+
+        async function loadUserData() {
+            try {
+                const response = await fetch('/api/user');
+                const data = await response.json();
+                if (data.username) {
+                    document.getElementById('display-user').innerText = `Welcome, ${data.username} 👤`;
+                }
+            } catch (err) {
+                console.error("Failed to fetch user:", err);
+            }
+        }
+        loadUserData();
+
+   
+        const grid = document.getElementById('grid');
+        const currentHour = new Date().getHours();
+        let justSelected = false; 
+
+        for (let i = 0; i < 24; i++) {
+            const block = document.createElement('div');
+            block.className = 'hour-block';
+            block.id = `block-${i}`;
+            
+            if (i < currentHour) {
+                block.classList.add('past');
+            } else if (i > currentHour) {
+                block.classList.add('future');
+            } else {
+                block.classList.add('current');
+                
+                block.onmouseenter = function() {
+                    if (!justSelected) {
+                        const popup = document.getElementById(`popup-${i}`);
+                        if(popup) popup.classList.add('show');
+                    }
+                };
+
+                block.onmouseleave = function() {
+                    const popup = document.getElementById(`popup-${i}`);
+                    if(popup) popup.classList.remove('show');
+                    justSelected = false; 
+                };
+
+                const popup = document.createElement('div');
+                popup.className = 'options-popup';
+                popup.id = `popup-${i}`;
+                popup.innerHTML = `
+                    <button class="mood-btn btn-bad" onclick="submitMood(event, ${i}, 1)">Bad</button>
+                    <button class="mood-btn btn-neutral" onclick="submitMood(event, ${i}, 2)">Neutral</button>
+                    <button class="mood-btn btn-good" onclick="submitMood(event, ${i}, 3)">Good</button>
+                `;
+                block.appendChild(popup);
+            }
+
+            const label = document.createElement('span');
+            label.innerText = `${i}:00`;
+            block.appendChild(label);
+            grid.appendChild(block);
+        }
+        
+        loadTodayMoods();
+
+
+
+async function loadTodayMoods() {
+    try {
+        const response = await fetch('/api/moods/today');
+        if (!response.ok) {
+            // If not logged in, the /api/user call would already have failed,
+            // but handle gracefully anyway
+            return;
+        }
+        const moods = await response.json(); // array of { hour, mood_score }
+
+        moods.forEach(entry => {
+            const block = document.getElementById(`block-${entry.hour}`);
+            if (block) {
+                // Apply mood color
+                block.classList.remove('mood-1', 'mood-2', 'mood-3');
+                block.classList.add(`mood-${entry.mood_score}`);
+                // Remove the popup because the hour is already logged
+                const popup = document.getElementById(`popup-${entry.hour}`);
+                if (popup) popup.remove();
+            }
+        });
+
+        // Calculate and display average
+        displayAverage(moods);
+    } catch (err) {
+        console.error("Failed to load moods:", err);
+    }
+}
+
+function displayAverage(moods) {
+    let avgDiv = document.getElementById('average-mood');
+    if (!avgDiv) {
+        avgDiv = document.createElement('div');
+        avgDiv.id = 'average-mood';
+        avgDiv.style.cssText = `
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+            max-width: 600px;
+            width: 100%;
+        `;
+        document.body.appendChild(avgDiv);
+    }
+
+    if (moods.length === 0) {
+        avgDiv.innerText = "No moods logged yet today.";
+        return;
+    }
+
+    const total = moods.reduce((sum, m) => sum + m.mood_score, 0);
+    const avg = (total / moods.length).toFixed(1);
+
+    let moodWord = '';
+    if (avg < 1.8) moodWord = '😞 Bad';
+    else if (avg < 2.4) moodWord = '😐 Neutral';
+    else moodWord = '😊 Good';
+
+    avgDiv.innerText = `Logged ${moods.length} hour(s) | Average mood: ${moodWord}`;
+}
+
+
+
+
+        
+        async function submitMood(event, hour, score) {
+            event.stopPropagation(); 
+            const block = document.getElementById(`block-${hour}`);
+            const popup = document.getElementById(`popup-${hour}`);
+
+            try {
+                const response = await fetch('/mood', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ hour: hour, mood_score: score })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    block.classList.remove('mood-1', 'mood-2', 'mood-3');
+                    block.classList.add(`mood-${score}`);
+                    
+                    popup.classList.remove('show'); 
+                    justSelected = true;
+                    loadTodayMoods();
+                } else {
+                    alert(result.message || "Failed to save mood");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Network Error");
+            }
+        }
+    </script>
+</body>
+</html>
