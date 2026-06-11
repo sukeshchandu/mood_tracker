@@ -120,16 +120,22 @@ app.post('/mood', async(req, res) => {
         return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const {hour, mood_score} = req.body;
-    const user_id = req.session.userId; 
-    const currentHour = new Date().getHours();
+    const {hour, mood_score, date} = req.body;
+const user_id = req.session.userId; 
 
-    if(parseInt(hour) !== currentHour){
-        return res.status(400).json({
-            success: false,
-            message: "time violation: you can only log in the current hour"
-        });
-    }
+const currentHour = new Date().toLocaleString('en-US', { 
+    timeZone: 'Asia/Dubai', 
+    hour: 'numeric', 
+    hour12: false 
+});
+const currentHourInt = parseInt(currentHour);
+
+if(parseInt(hour) !== currentHourInt){
+    return res.status(400).json({
+        success: false,
+        message: `time violation: you can only log in the current hour (${currentHourInt}:00)`
+    });
+}
 
     try {
         const check = await pool.query(
